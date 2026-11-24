@@ -52,16 +52,13 @@ const els = {
   toast: $("toast"),
   toastText: $("toast-text"),
   toastStar: $("toast-star"),
-  dedicationName: $("dedication-name"),
-  dedicationFoot: $("dedication-foot"),
-  dedicationEdit: $("dedication-edit"),
+  dedicationTrigger: $("dedication-trigger"),
   dedicationEditor: $("dedication-editor"),
   dedicationEditorScrim: $("dedication-editor-scrim"),
   dedicationEditorClose: $("dedication-editor-close"),
   dedicationEditorSave: $("dedication-editor-save"),
   dedicationInput: $("dedication-input"),
   dedicationCount: $("dedication-count"),
-  dedicationPreviewName: $("dedication-preview-name"),
   wishQuote: $("wish-quote"),
   wishQuoteText: $("wish-quote-text"),
   wishQuoteEn: $("wish-quote-en"),
@@ -214,40 +211,15 @@ bus.on("ui:toast", ({ msg, dur }) => showToast(msg, dur));
 const DEDICATION_KEY = "xmas-dedication-v1";
 let dedicationText = "亲爱的";
 
-// 依据字数与中文占比计算合适的字号，保证长文本不会撑破容器或遮挡圣诞树
-function fitName(el, text) {
-  const chars = [...(text || "")];
-  const n = chars.length;
-  // 中文/全角按 1 个宽字符计，英文数字按 0.58 计，得到「视觉宽度」
-  const width = chars.reduce((s, c) => s + (/[\u2E80-\u9FFF\uFF00-\uFFEF]/.test(c) ? 1 : 0.58), 0) || 1;
-  const isNarrow = window.innerWidth <= 720;
-  const maxFont = isNarrow ? 28 : 44;
-  const minFont = isNarrow ? 15 : 16;
-  // 单行能容纳的视觉字符数（随屏宽变化）；超出后按行数与宽度综合缩小
-  const maxLineWidth = isNarrow ? 7 : 9;
-  let size = maxFont;
-  if (width > maxLineWidth) {
-    // 目标：控制在约 3 行内，同时字号不低于 minFont
-    size = (maxFont * maxLineWidth * 3) / (width * 2.0);
-  }
-  size = Math.max(minFont, Math.min(maxFont, Math.round(size)));
-  el.style.setProperty("--name-size", size + "px");
-  // 长文本改为左对齐更整齐，短文本保持自然
-  el.style.letterSpacing = n > 24 ? "0.01em" : "0.03em";
-}
-
 function applyDedication(text) {
-  dedicationText = (text ?? "").trim();
-  els.dedicationName.textContent = dedicationText;
-  els.dedicationPreviewName.textContent = dedicationText;
-  fitName(els.dedicationName, dedicationText);
-  fitName(els.dedicationPreviewName, dedicationText);
+  dedicationText = text ?? "";
 }
 
 function saveDedication() {
-  const value = els.dedicationInput.value.trim();
+  const value = els.dedicationInput.value;
   applyDedication(value);
-  try { localStorage.setItem(DEDICATION_KEY, dedicationText); } catch (e) { /* 隐私模式下忽略 */ }
+  try { localStorage.setItem(DEDICATION_KEY, dedicationText); }
+  catch (e) { showToast("无法保存到浏览器，此次内容仅在当前页面有效", 5000); return; }
   closeDedicationEditor();
   showToast(value ? "这份心意，已刻上这棵树 ✦" : "已清空题字", 2600);
 }
@@ -255,35 +227,44 @@ function saveDedication() {
 function openDedicationEditor() {
   els.dedicationInput.value = dedicationText;
   updateDedicationCount();
-  fitName(els.dedicationPreviewName, dedicationText);
   els.dedicationEditor.classList.add("is-open");
   root.classList.add("panel-open");
-  setTimeout(() => { els.dedicationInput.focus(); els.dedicationInput.setSelectionRange(999, 999); }, 260);
+  // Leave the message readable on phones without immediately opening the keyboard.
+  els.dedicationEditorClose.focus({ preventScroll: true });
 }
 function closeDedicationEditor() {
   els.dedicationEditor.classList.remove("is-open");
   root.classList.remove("panel-open");
+  els.dedicationTrigger.focus({ preventScroll: true });
 }
 function updateDedicationCount() {
   const n = els.dedicationInput.value.length;
   els.dedicationCount.textContent = n + " 字";
 }
 
-els.dedicationEdit.addEventListener("click", (e) => { e.stopPropagation(); openDedicationEditor(); });
+// A small drag beginning on Kitty should not be interpreted as a tap.
+let topperPointer = null;
+let topperDragged = false;
+els.dedicationTrigger.addEventListener("pointerdown", e => {
+  topperPointer = { id: e.pointerId, x: e.clientX, y: e.clientY };
+  topperDragged = false;
+  els.dedicationTrigger.setPointerCapture(e.pointerId);
+});
+els.dedicationTrigger.addEventListener("pointermove", e => {
+  if (topperPointer?.id === e.pointerId && Math.hypot(e.clientX - topperPointer.x, e.clientY - topperPointer.y) > 10) topperDragged = true;
+});
+els.dedicationTrigger.addEventListener("pointercancel", () => { topperPointer = null; topperDragged = true; });
+els.dedicationTrigger.addEventListener("click", e => {
+  if (e.detail !== 0 && topperDragged) { topperPointer = null; return; }
+  topperPointer = null;
+  openDedicationEditor();
+});
 els.dedicationEditorClose.addEventListener("click", closeDedicationEditor);
 els.dedicationEditorScrim.addEventListener("click", closeDedicationEditor);
 els.dedicationEditorSave.addEventListener("click", saveDedication);
-els.dedicationInput.addEventListener("input", () => {
-  updateDedicationCount();
-  fitName(els.dedicationPreviewName, els.dedicationInput.value);
-  els.dedicationPreviewName.textContent = els.dedicationInput.value;
-});
+els.dedicationInput.addEventListener("input", updateDedicationCount);
 els.dedicationInput.addEventListener("keydown", (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); saveDedication(); }
-});
-window.addEventListener("resize", () => {
-  fitName(els.dedicationName, dedicationText);
-  if (els.dedicationEditor.classList.contains("is-open")) fitName(els.dedicationPreviewName, els.dedicationInput.value);
 });
 
 // 初始化：读取本地保存的题字

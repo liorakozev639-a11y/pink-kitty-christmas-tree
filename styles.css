@@ -3095,6 +3095,26 @@ textarea:focus {
 .manual-controls { position:absolute; z-index:10; right:24px; bottom:110px; display:flex; gap:8px; }
 .manual-controls button { border:1px solid #ffc2df88; background:#35152ebd; color:#fff0fa; border-radius:99px; padding:10px 15px; font-size:14px; }
 @media(max-width:700px) { .manual-controls { right:12px; bottom:94px; } .manual-controls button { padding:8px 12px; } .frame-kitty { width:85px; height:85px; right:-20px; bottom:-22px; } }
+
+/* Tree-top message: the button follows Kitty in 3D; the hint stays out of the tree. */
+.dedication-trigger {
+  position: absolute; z-index: 8; visibility: hidden; transform: translate(-50%, -50%);
+  border: 0; border-radius: 50%; background: transparent; cursor: pointer;
+  touch-action: manipulation;
+}
+.dedication-trigger:focus-visible { outline: 2px solid #ffd1e9; outline-offset: 3px; }
+.dedication-hint {
+  position: absolute; z-index: 9; top: 114px; left: 44px;
+  color: #ffe1ef; font-size: 14px; letter-spacing: .03em;
+  text-shadow: 0 1px 8px #200d23; pointer-events: none;
+}
+.panel-open .dedication-trigger, .viewer-open .dedication-trigger { pointer-events: none; }
+.panel-open .dedication-hint, .viewer-open .dedication-hint, .is-cinema .dedication-hint { opacity: 0; }
+.dedication-editor__label, .dedication-editor__meta { font-size: 14px; }
+.dedication-editor textarea { font-size: 16px; }
+@media(max-width: 700px) {
+  .dedication-hint { top: max(82px, calc(env(safe-area-inset-top) + 74px)); left: 14px; font-size: 12px; }
+}
 /* A dedicated lower mat keeps the sticker clear of the photograph. */
 .photo-viewer__card { padding-bottom: 88px; }
 .frame-kitty { width:72px; height:72px; bottom:3px; right:4px; }

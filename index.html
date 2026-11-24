@@ -97,24 +97,9 @@
 
   <div class="move-hint">移动手掌，让光追随你的轨迹 ✦</div>
 
-  <!-- ============ 左侧题字牌（To: xxx） ============ -->
-  <div class="dedication" id="dedication">
-    <div class="dedication__corner dedication__corner--tl"></div>
-    <div class="dedication__corner dedication__corner--br"></div>
-    <div class="dedication__label">For you · 只为你</div>
-    <div class="dedication__row">
-      <span class="dedication__to">To</span>
-      <span class="dedication__colon">:</span>
-      <span class="dedication__name" id="dedication-name">亲爱的</span>
-    </div>
-    <div class="dedication__line"><span></span><i>✦</i><span></span></div>
-    <div class="dedication__foot" id="dedication-foot">Merry Christmas · 2026</div>
-    <button class="dedication__edit" id="dedication-edit" title="修改题字" aria-label="修改题字">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7.5 18.5 3 20l1.5-4.5L16.5 3.5z"/>
-      </svg>
-    </button>
-  </div>
+  <!-- 跟随树顶 Kitty 的可访问点击区域，坐标由 3D 场景更新。 -->
+  <button id="dedication-trigger" class="dedication-trigger" type="button" aria-label="查看或编辑树顶的心里话" title="查看或编辑心里话"></button>
+  <div class="dedication-hint">✦ 点击树顶 Kitty，查看或编辑心里话</div>
 
   <!-- ============ 底部手势说明 ============ -->
   <div class="gesture-dock" id="gesture-dock">
@@ -215,40 +200,28 @@
   </section>
 
   <!-- ============ 题字编辑弹窗 ============ -->
-  <div class="dedication-editor" id="dedication-editor" role="dialog" aria-modal="true" aria-label="修改题字">
+  <div class="dedication-editor" id="dedication-editor" role="dialog" aria-modal="true" aria-label="树顶的心里话">
     <div class="dedication-editor__scrim" id="dedication-editor-scrim"></div>
     <div class="dedication-editor__card">
       <div class="dedication-editor__head">
         <div>
           <div class="eyebrow">Just for you</div>
-          <h2>写一句只给她的话</h2>
+          <h2>藏在树顶的心里话</h2>
         </div>
         <button class="round-close" id="dedication-editor-close" aria-label="关闭">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
       </div>
       <div class="dedication-editor__body">
-        <label class="dedication-editor__label" for="dedication-input">称呼 / 名字</label>
-        <textarea id="dedication-input" rows="3" placeholder="例如：小雪、亲爱的、致我最爱的人…" spellcheck="false"></textarea>
+        <label class="dedication-editor__label" for="dedication-input">写下想说的话</label>
+        <textarea id="dedication-input" rows="6" placeholder="把想说的话藏在这里…" spellcheck="false"></textarea>
         <div class="dedication-editor__meta">
-          <span>支持中文 · 字数不限（过长会自动缩小，不会挡住圣诞树）</span>
+          <span>仅保存在此设备的浏览器中</span>
           <span id="dedication-count">0 字</span>
-        </div>
-        <div class="dedication-editor__preview">
-          <span class="dedication-editor__preview-label">效果预览</span>
-          <div class="dedication">
-            <div class="dedication__label">For you · 只为你</div>
-            <div class="dedication__row">
-              <span class="dedication__to">To</span><span class="dedication__colon">:</span>
-              <span class="dedication__name" id="dedication-preview-name">亲爱的</span>
-            </div>
-            <div class="dedication__line"><span></span><i>✦</i><span></span></div>
-            <div class="dedication__foot">Merry Christmas · 2026</div>
-          </div>
         </div>
       </div>
       <div class="dedication-editor__foot">
-        <button class="text-action" id="dedication-editor-save">刻上这棵树 <span>↗</span></button>
+        <button class="text-action" id="dedication-editor-save">保存心里话</button>
       </div>
     </div>
   </div>
@@ -358,7 +331,7 @@
         <p>进去后，右上角 <b>◉ 净屏观赏</b> 可一键收起所有提示，只留星光与照片；<b>回忆</b> 上传照片，<b>训练师</b> 可教它认得你的手势。</p>
       </div>
 
-      <div class="privacy"><span>✦</span>左侧 <b style="color:var(--gold-bright);font-weight:400">To:</b> 题字可点右上角 ✎ 修改 · 摄像头画面仅在本机处理</div>
+      <div class="privacy"><span>✦</span>点击树顶 Kitty 查看或编辑心里话 · 摄像头画面仅在本机处理</div>
     </div>
 
     <div class="intro__coordinates">

@@ -16,6 +16,9 @@ let treeRoot;
 let treePoints, treeUniforms;
 let ringGroup;
 let heartGroup, heartLight, heartGlow;
+const topperScreenPoint = new THREE.Vector3();
+const topperCameraPoint = new THREE.Vector3();
+let topperTrigger;
 let photoObjects = [];
 
 const _v = new THREE.Vector3();
@@ -551,6 +554,20 @@ function animate() {
 
   updatePhotos(time, fadeCur);
   controls.update();
+  // Position an accessible DOM button over the rotating, scaled 3D Kitty.
+  treeRoot.updateMatrixWorld(true);
+  camera.updateMatrixWorld();
+  heartGroup.getWorldPosition(topperScreenPoint);
+  topperCameraPoint.copy(topperScreenPoint).applyMatrix4(camera.matrixWorldInverse);
+  topperScreenPoint.project(camera);
+  const visible = topperCameraPoint.z < 0 && topperScreenPoint.z < 1 && Math.abs(topperScreenPoint.x) < 1.1 && Math.abs(topperScreenPoint.y) < 1.1;
+  topperTrigger.style.visibility = visible ? "visible" : "hidden";
+  if (visible) {
+    const screenSize = Math.max(48, Math.min(150, window.innerHeight * camera.projectionMatrix.elements[5] * treeRoot.scale.x / -topperCameraPoint.z));
+    topperTrigger.style.left = `${(topperScreenPoint.x * 0.5 + 0.5) * window.innerWidth}px`;
+    topperTrigger.style.top = `${(-topperScreenPoint.y * 0.5 + 0.5) * window.innerHeight}px`;
+    topperTrigger.style.width = topperTrigger.style.height = `${screenSize}px`;
+  }
   renderer.render(scene, camera);
 }
 
@@ -562,6 +579,7 @@ export function bootScene() {
   booted = true;
 
   const canvas = document.getElementById("scene-canvas");
+  topperTrigger = document.getElementById("dedication-trigger");
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setSize(window.innerWidth, window.innerHeight, false);
