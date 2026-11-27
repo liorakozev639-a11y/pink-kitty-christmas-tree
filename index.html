@@ -99,7 +99,7 @@
 
   <!-- 跟随树顶 Kitty 的可访问点击区域，坐标由 3D 场景更新。 -->
   <button id="dedication-trigger" class="dedication-trigger" type="button" aria-label="查看或编辑树顶的心里话" title="查看或编辑心里话"></button>
-  <div class="dedication-hint">✦ 点击树顶 Kitty，查看或编辑心里话</div>
+  <div class="dedication-hint" id="dedication-hint">✦ 点击树顶 Kitty，查看或编辑心里话</div>
 
   <!-- ============ 底部手势说明 ============ -->
   <div class="gesture-dock" id="gesture-dock">
@@ -216,11 +216,18 @@
         <label class="dedication-editor__label" for="dedication-input">写下想说的话</label>
         <textarea id="dedication-input" rows="6" placeholder="把想说的话藏在这里…" spellcheck="false"></textarea>
         <div class="dedication-editor__meta">
-          <span>仅保存在此设备的浏览器中</span>
+          <span id="dedication-origin">保存的文字只在此设备可见</span>
           <span id="dedication-count">0 字</span>
+        </div>
+        <p class="dedication-share-note">生成链接时，祝福文字会包含在链接中（最多 300 字）；任何持有链接的人都可以查看。</p>
+        <div class="dedication-share" id="dedication-share-result" hidden>
+          <label for="dedication-share-link">祝福链接</label>
+          <input id="dedication-share-link" type="text" readonly aria-label="祝福链接，点击可选中复制">
+          <p>链接包含祝福文字，任何持有链接的人都可以查看。若未自动复制，请长按链接复制。</p>
         </div>
       </div>
       <div class="dedication-editor__foot">
+        <button class="text-action dedication-share-button" id="dedication-share" type="button">生成祝福链接</button>
         <button class="text-action" id="dedication-editor-save">保存心里话</button>
       </div>
     </div>

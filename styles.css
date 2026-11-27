@@ -2668,8 +2668,19 @@ textarea:focus {
 .dedication-editor__foot {
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
   padding: 14px 25px 24px;
 }
+.dedication-share[hidden] { display: none; }
+.dedication-share-note { margin: 12px 0 0; color: #eac8d9; font-size: 13px; line-height: 1.5; }
+.dedication-share { margin-top: 18px; }
+.dedication-share label { display: block; margin-bottom: 8px; color: #ffcee6; font-size: 14px; }
+.dedication-share input {
+  width: 100%; padding: 10px 12px; border: 1px solid rgba(255, 181, 220, .4);
+  border-radius: 10px; color: #fff1f8; background: rgba(17, 7, 19, .75); font-size: 14px;
+}
+.dedication-share p { margin: 8px 0 0; color: #eac8d9; font-size: 13px; line-height: 1.5; }
 .dedication-editor__foot .text-action {
   margin-top: 0;
   padding: 10px 20px;

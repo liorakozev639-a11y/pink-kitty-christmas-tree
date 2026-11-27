@@ -3,6 +3,7 @@
 // ============================================================
 import { bootScene, addPhoto, removePhoto, getScreenPhotos, highlightPhoto, pulsePhoto } from "./main.js";
 import { HandLandmarker, FilesetResolver } from "./vision_bundle.mjs";
+import { requestCamera, cameraErrorMessage, stopCamera } from "./camera.mjs";
 import { gesture, photos, bus } from "./store.js";
 import { recognize, applyTakeover, updateTrainer, initTrainer, showTrainer, resetRecognition, setPreviewMode, togglePreviewMode, config as learnConfig } from "./gesture-learn.js";
 
@@ -53,12 +54,17 @@ const els = {
   toastText: $("toast-text"),
   toastStar: $("toast-star"),
   dedicationTrigger: $("dedication-trigger"),
+  dedicationHint: $("dedication-hint"),
   dedicationEditor: $("dedication-editor"),
   dedicationEditorScrim: $("dedication-editor-scrim"),
   dedicationEditorClose: $("dedication-editor-close"),
   dedicationEditorSave: $("dedication-editor-save"),
   dedicationInput: $("dedication-input"),
   dedicationCount: $("dedication-count"),
+  dedicationOrigin: $("dedication-origin"),
+  dedicationShare: $("dedication-share"),
+  dedicationShareResult: $("dedication-share-result"),
+  dedicationShareLink: $("dedication-share-link"),
   wishQuote: $("wish-quote"),
   wishQuoteText: $("wish-quote-text"),
   wishQuoteEn: $("wish-quote-en"),
@@ -210,6 +216,31 @@ bus.on("ui:toast", ({ msg, dur }) => showToast(msg, dur));
    ============================================================ */
 const DEDICATION_KEY = "xmas-dedication-v1";
 let dedicationText = "亲爱的";
+let incomingWish = null;
+const MAX_WISH_CHARS = 300;
+
+// A fragment is never sent to the server. It is still visible to anyone with the link.
+function encodeWish(value) {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function decodeWish(value) {
+  if (!/^[A-Za-z0-9_-]{1,2400}$/.test(value)) throw new Error("Invalid wish");
+  const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
+  const binary = atob(base64 + "=".repeat((4 - base64.length % 4) % 4));
+  const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+  const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  if (!text.trim() || [...text].length > MAX_WISH_CHARS) throw new Error("Invalid wish");
+  return text;
+}
+function readSharedWish() {
+  const params = new URLSearchParams(location.hash.slice(1));
+  if (!params.has("wish")) return null;
+  try { return decodeWish(params.get("wish")); }
+  catch { showToast("祝福链接无效或已损坏，请联系分享者", 5000); return null; }
+}
 
 function applyDedication(text) {
   dedicationText = text ?? "";
@@ -218,14 +249,27 @@ function applyDedication(text) {
 function saveDedication() {
   const value = els.dedicationInput.value;
   applyDedication(value);
+  let savedLocally = true;
   try { localStorage.setItem(DEDICATION_KEY, dedicationText); }
-  catch (e) { showToast("无法保存到浏览器，此次内容仅在当前页面有效", 5000); return; }
+  catch (e) { savedLocally = false; }
+  // Keep the sender's original link untouched; saving changes only this browser.
+  incomingWish = null;
+  els.dedicationHint.textContent = "✦ 点击树顶 Kitty，查看或编辑心里话";
+  if (new URLSearchParams(location.hash.slice(1)).has("wish")) {
+    const url = new URL(location.href);
+    const fragment = new URLSearchParams(url.hash.slice(1));
+    fragment.delete("wish");
+    url.hash = fragment.toString();
+    history.replaceState(null, "", url.href);
+  }
   closeDedicationEditor();
-  showToast(value ? "这份心意，已刻上这棵树 ✦" : "已清空题字", 2600);
+  showToast(savedLocally ? (value ? "这份心意，已保存在此设备 ✦" : "已清空题字") : "无法保存到浏览器，此次内容仅在当前页面有效", savedLocally ? 2600 : 5000);
 }
 
 function openDedicationEditor() {
-  els.dedicationInput.value = dedicationText;
+  els.dedicationInput.value = incomingWish ?? dedicationText;
+  els.dedicationOrigin.textContent = incomingWish !== null ? "这是一份通过链接送来的祝福；保存后仅在此设备保留" : "保存的文字只在此设备可见";
+  els.dedicationShareResult.hidden = true;
   updateDedicationCount();
   els.dedicationEditor.classList.add("is-open");
   root.classList.add("panel-open");
@@ -238,8 +282,29 @@ function closeDedicationEditor() {
   els.dedicationTrigger.focus({ preventScroll: true });
 }
 function updateDedicationCount() {
-  const n = els.dedicationInput.value.length;
+  const n = [...els.dedicationInput.value].length;
   els.dedicationCount.textContent = n + " 字";
+}
+
+async function shareDedication() {
+  const value = els.dedicationInput.value;
+  if (!value.trim()) { showToast("先写下想分享的祝福", 3000); return; }
+  if ([...value].length > MAX_WISH_CHARS) { showToast(`祝福最多 ${MAX_WISH_CHARS} 字，请缩短后分享`, 4500); return; }
+  if (location.protocol !== "https:" || ["localhost", "127.0.0.1", "::1"].includes(location.hostname)) {
+    showToast("请打开正式分享网站，再生成祝福链接", 4500); return;
+  }
+  const url = new URL(location.pathname, location.origin);
+  url.hash = new URLSearchParams({ wish: encodeWish(value) }).toString();
+  els.dedicationShareLink.value = url.href;
+  els.dedicationShareResult.hidden = false;
+  try {
+    await navigator.clipboard.writeText(url.href);
+    showToast("祝福链接已复制，发给想念的人吧 ♡", 3500);
+  } catch {
+    els.dedicationShareLink.focus();
+    els.dedicationShareLink.select();
+    showToast("请长按或选择链接后复制", 5000);
+  }
 }
 
 // A small drag beginning on Kitty should not be interpreted as a tap.
@@ -262,7 +327,12 @@ els.dedicationTrigger.addEventListener("click", e => {
 els.dedicationEditorClose.addEventListener("click", closeDedicationEditor);
 els.dedicationEditorScrim.addEventListener("click", closeDedicationEditor);
 els.dedicationEditorSave.addEventListener("click", saveDedication);
-els.dedicationInput.addEventListener("input", updateDedicationCount);
+els.dedicationShare.addEventListener("click", shareDedication);
+els.dedicationShareLink.addEventListener("click", () => els.dedicationShareLink.select());
+els.dedicationInput.addEventListener("input", () => {
+  updateDedicationCount();
+  els.dedicationShareResult.hidden = true;
+});
 els.dedicationInput.addEventListener("keydown", (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); saveDedication(); }
 });
@@ -272,6 +342,8 @@ els.dedicationInput.addEventListener("keydown", (e) => {
   let saved = "亲爱的";
   try { saved = localStorage.getItem(DEDICATION_KEY) ?? "亲爱的"; } catch (e) { /* 忽略 */ }
   applyDedication(saved);
+  incomingWish = readSharedWish();
+  if (incomingWish !== null) els.dedicationHint.textContent = "✦ 你收到一份祝福，点击树顶 Kitty 查看";
 })();
 
 /* ============================================================
@@ -1141,41 +1213,49 @@ function enterExperience(withCamera) {
   showWelcomeOnce();
 }
 
+let cameraStarting = false;
 async function startCamera() {
   if (stream) { enterExperience(true); startLoop(); return; }
-
-  // 模型未就绪时先等待，而不是静默无响应
-  if (!handLandmarker) {
-    els.startLabel.textContent = "模型加载中…";
-    setStatus("手势模型加载中，请稍候…");
-    const ok = await modelReady;
-    if (!ok || !handLandmarker) {
-      els.startLabel.textContent = "开启摄像头";
-      showToast("手势模型加载失败，请刷新页面重试", 4500);
-      return;
-    }
-  }
-
+  if (cameraStarting) return;
+  cameraStarting = true;
   els.startLabel.textContent = "正在开启…";
+
+  // 必须在点击事件中立刻发起权限请求：不能先等待模型，否则部分手机浏览器会丢失用户手势。
+  const cameraRequest = requestCamera(navigator.mediaDevices);
+  let acquired = null;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
-      audio: false,
-    });
-    els.webcam.srcObject = stream;
+    acquired = await cameraRequest;
+    els.webcam.srcObject = acquired;
     await els.webcam.play();
-    els.overlay.width = els.webcam.videoWidth || 1280;
-    els.overlay.height = els.webcam.videoHeight || 720;
+    if (!handLandmarker) {
+      setStatus("摄像头已开启，正在准备手势识别…");
+      showToast("摄像头已开启，正在准备手势识别…", 6000);
+      const ok = await Promise.race([modelReady, new Promise(resolve => setTimeout(() => resolve(false), 45000))]);
+      if (!ok || !handLandmarker) {
+        throw Object.assign(new Error("model unavailable"), {name:"HandModelError"});
+      }
+    }
+    stream = acquired;
+    els.overlay.width = els.webcam.videoWidth || 640;
+    els.overlay.height = els.webcam.videoHeight || 480;
     els.webcam.classList.add("is-playing");
     lastVideoTime = -1;
     enterExperience(true);
     startLoop();
     showToast("摄像头已开启 · 试试握拳与张开 ✦", 3600);
   } catch (e) {
-    console.error(e);
-    showToast("摄像头开启失败：" + (e.message || e.name), 4200);
+    stopCamera(acquired);
+    els.webcam.srcObject = null;
+    console.error("Camera startup failed", e);
+    const message = e?.name === "HandModelError"
+      ? "手势识别加载失败或超时，请检查网络后刷新；也可以先用触摸操作。"
+      : cameraErrorMessage(e);
+    setStatus(message, "error");
+    showToast(message, 8000);
+  } finally {
+    cameraStarting = false;
+    els.startLabel.textContent = "开启摄像头";
   }
-  els.startLabel.textContent = "开启摄像头";
 }
 
 els.startCamera.addEventListener("click", startCamera);
