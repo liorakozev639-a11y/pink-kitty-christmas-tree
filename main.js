@@ -138,17 +138,18 @@ function scatterPoint() {
   };
 }
 
-/** 一条由树顶顺时针向下展开的连续螺旋，辅以稀疏星尘。 */
+/** 饱满的粒子树身，外侧保留顺时针向下的明亮螺旋。 */
 function spiralTreePoint(i, total) {
   // d 从树顶向下递增；从上方看，x→+z 是顺时针方向。
   const d = Math.random();
   const t = 1 - d;
   const baseR = coneRadius(t);
-  if (Math.random() < 0.09) {
-    // 少量内侧星尘，让主体保持轻盈而不填满螺旋间隙。
+  if (Math.random() < 0.60) {
+    // 以外层枝叶为主、内层星尘为辅，填满圈间空隙并保留立体深度。
     const angle = rand(0, Math.PI * 2);
-    const r = baseR * Math.sqrt(Math.random()) * 0.85;
-    return { x: Math.cos(angle) * r, y: TREE_BOTTOM + t * TREE_H, z: Math.sin(angle) * r, t };
+    const shell = Math.random() < 0.78;
+    const r = baseR * (shell ? rand(0.78, 1.02) : Math.sqrt(Math.random()) * 0.80);
+    return { x: Math.cos(angle) * r, y: TREE_BOTTOM + t * TREE_H, z: Math.sin(angle) * r, t, body: true };
   }
   const angle = d * 8.5 * Math.PI * 2 + rand(-0.05, 0.05);
   // 窄而有厚度的光带；避免把相邻圈连成实心锥体。
@@ -160,7 +161,7 @@ function spiralTreePoint(i, total) {
 /* ============================================================
    三、发光粒子系统（GPU 插值，丝滑）
    ============================================================ */
-const PARTICLE_COUNT = matchMedia("(max-width: 700px)").matches ? 14000 : 28000;
+const PARTICLE_COUNT = matchMedia("(max-width: 700px)").matches ? 22000 : 40000;
 
 const VERT = `
   attribute vec3 aTree;
@@ -237,6 +238,7 @@ function buildTreeParticles() {
     tree[i * 3] = tp.x; tree[i * 3 + 1] = tp.y; tree[i * 3 + 2] = tp.z;
     scatter[i * 3] = sc.x; scatter[i * 3 + 1] = sc.y; scatter[i * 3 + 2] = sc.z;
     const c = treeColor(tp.t ?? clamp((tp.y - TREE_BOTTOM) / TREE_H));
+    if (tp.body) c.multiplyScalar(0.58);
     colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
     // 大小分层：多数细密星点 + 少量较大亮点，制造闪烁层次
     sizes[i] = Math.random() < 0.08 ? rand(2.2, 3.4) : rand(0.7, 1.7);
